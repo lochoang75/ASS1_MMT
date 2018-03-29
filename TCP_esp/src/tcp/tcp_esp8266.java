@@ -6,7 +6,10 @@ import java.net.*;
 public class tcp_esp8266 {
 	  public static void main(String[] args) throws Exception {
 		//	Create server socket
-	    ServerSocket serverSocket = new ServerSocket(9882, 0, InetAddress.getByName("10.0.128.164"));
+	    ServerSocket serverSocket = new ServerSocket(9882, 0, InetAddress.getByName("10.0.128.167"));
+	    
+	    //	Create ID list
+	    int[] list= {0,0,0,0,0,0,0,0,0,0};
 	    
 	    
 	    //	Get server info
@@ -23,14 +26,14 @@ public class tcp_esp8266 {
 	      System.out.println("Received a  connection from  " + activeSocket);
 	      
 	      // Handle request from client
-	      Runnable runnable = () -> handleClientRequest(activeSocket);
+	      Runnable runnable = () -> handleClientRequest(activeSocket,list);
 	      
 	      // Create new thread for new client
 	      new Thread(runnable).start(); // start a new thread
 	    }
 	  }
 
-	  public static void handleClientRequest(Socket socket) {
+	  public static void handleClientRequest(Socket socket,int[] list) {
 	    try{
 	    // Create buffer
 	      BufferedReader socketReader = null;
@@ -47,11 +50,20 @@ public class tcp_esp8266 {
 	      // Wait until receive data from client
 	      while ((inMsg = socketReader.readLine()) != null) {
 	        System.out.println("Received from  client: " + inMsg);
-	        String outMsg = inMsg;
+	        
+	        String outMsg = null;
+	        
+	        if(Integer.parseInt(inMsg)==-1) {
+	        	int max=find_max(list);
+	        	outMsg=String.valueOf(Provide_id(max,list));
+		        System.out.println("Sending to client: "+outMsg);
+		        socketWriter.write(outMsg);
+	        }
+	        else {
+	        	list[Integer.parseInt(inMsg)]++;
+	        }
 	        
 	        // Send data back to client
-	        System.out.println("Sending to client: "+outMsg);
-	        socketWriter.write(outMsg);
 	        socketWriter.write("\n");
 	        
 	        // Clean buffer
@@ -65,5 +77,35 @@ public class tcp_esp8266 {
 	      e.printStackTrace();
 	    }
 
+	  }
+	  
+	  //	Find max value in arr
+	  public static int find_max(int[] arr) {
+		  int size= arr.length;
+		  int max=arr[0];
+		  for(int i=0;i<size;i++) {
+			  if(max<arr[i]) max=arr[i];
+		  }
+		  return max;
+	  }
+	  
+	  //	Replace or New ID for client
+	  public static int Provide_id(int max,int[]arr) {
+		  int size=arr.length;
+		  for(int i=0;i<size;i++) {
+			  if(arr[i]<(max-3)&&arr[i]!=0) {
+				  for(int j=0;j<size;j++) {
+					  arr[j]=0;
+				  }
+				  return i;
+			  }
+			  if(arr[i]==0) {
+				  for(int j=0;j<size;j++) {
+					  arr[j]=0;
+				  }
+				  return i;
+			  }
+		  }
+		  return 0;
 	  }
 	}
