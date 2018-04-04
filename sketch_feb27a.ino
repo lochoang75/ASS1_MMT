@@ -1,17 +1,22 @@
-
+#include <OneWire.h>
+#include <DallasTemperature.h>
 #include <ESP8266WiFi.h>
 #include <WiFiUDP.h>
-
+#include"SoftwareSerial.h"
+#include<String>
+#define ONE_WIRE_BUS 0
+OneWire oneWire(ONE_WIRE_BUS);
+DallasTemperature sensors(&oneWire);
 WiFiUDP Client;
 WiFiClient client;
-char* serdata="connect node";
 byte fromserver=0;
 const char* ssid     = "Fallinlove";      // SSID
 const char* password = "Toiyeu8438626";      // Password
-const char* host = "10.0.128.164";  // IP serveur - Server IP
-const char ip[]="10.0.128.164";  //IP UDP server
+const char* host = "10.0.128.167";  // IP serveur - Server IP
+const char ip[]="10.0.128.167";  //IP UDP server
 const int   tcp_port = 9882;            // Port serveur - Server Port
-
+String ID="-1";
+char* serdata="connection";
 
 void setup() 
 {
@@ -41,16 +46,19 @@ else{
   return;
  }
 }
-
+float temp=sensors.getTempCByIndex(0);
 void loop() 
 {
+ sensors.requestTemperatures();  
+ temp=sensors.getTempCByIndex(0);
 const int udp_port=9870;
-int i=0;  
  tcpsend();
- if(i==0){
+ if(ID!="0"){
     }
    /*Serial.print("connecting to ");
     Serial.println(ip);*/
+    String s=ID+(String)temp;
+    s.toCharArray(serdata,s.length());
     udpsend();    
     delay(3000);
 }
@@ -66,11 +74,17 @@ void udpsend()
 void tcpsend()
 {
   client.connect(host, tcp_port);
-  Serial.println("request id");
-  client.println("this is meesage from node");
-  client.flush();  // Bufffer löschen
-  String line = client.readStringUntil('\n');
-  Serial.println(line);
+  if(ID=="-1"){
+    client.println("-1");
+    client.flush();  // clear buff
+    String line = client.readStringUntil('\n');
+    ID=line;
+    Serial.println("receive id "+ line);
+  }
+  else {
+    client.println(ID);
+    client.flush();  // clear buff
+  }
   client.stop();
   return;
 }
